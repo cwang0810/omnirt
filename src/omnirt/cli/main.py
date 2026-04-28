@@ -28,6 +28,7 @@ PUBLIC_TASK_SURFACES = frozenset(
         "text2video",
         "image2video",
         "audio2video",
+        "text2audio",
     }
 )
 
@@ -48,7 +49,7 @@ def add_request_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--config", help="Path to a YAML or JSON request file.")
     parser.add_argument(
         "--task",
-        choices=["text2image", "image2image", "inpaint", "edit", "text2video", "image2video", "audio2video"],
+        choices=["text2image", "image2image", "inpaint", "edit", "text2video", "image2video", "audio2video", "text2audio"],
         help="Task to run.",
     )
     parser.add_argument("--model", help="Model registry id to execute.")
@@ -59,6 +60,7 @@ def add_request_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--prompt", help="Prompt for image or video generation tasks.")
     parser.add_argument("--negative-prompt", help="Negative prompt for prompt-driven generation.")
+    parser.add_argument("--reference-text", help="Reference transcript for text2audio voice cloning prompts.")
     parser.add_argument("--image", help="Input image for image-guided generation.")
     parser.add_argument("--mask", help="Input mask image for inpainting.")
     parser.add_argument("--audio", help="Input audio for audio2video generation.")
@@ -86,13 +88,31 @@ def add_request_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--output-dir", help="Output directory for saved artifacts.")
     parser.add_argument("--model-path", help="Override the default model source.")
+    parser.add_argument("--server-addr", help="Triton server address for external service-backed models.")
+    parser.add_argument("--server-port", type=int, help="Triton gRPC server port for external service-backed models.")
+    parser.add_argument("--sample-rate", type=int, help="Output audio sample rate for text2audio models.")
+    parser.add_argument("--request-id", help="Stable external request id for deterministic service probes.")
     parser.add_argument("--motion-bucket-id", type=int, help="Alias for SVD frame bucket / motion bucket id.")
-    parser.add_argument("--repo-path", help="External repository checkout path for script-backed models such as SoulX-FlashTalk.")
+    parser.add_argument(
+        "--repo-path",
+        help="External repository checkout path for script-backed models such as SoulX-FlashTalk or SoulX-FlashHead.",
+    )
     parser.add_argument("--ckpt-dir", help="Checkpoint directory for script-backed models.")
-    parser.add_argument("--wav2vec-dir", help="wav2vec checkpoint directory for FlashTalk.")
+    parser.add_argument("--wav2vec-dir", help="wav2vec checkpoint directory for script-backed talking-head models.")
     parser.add_argument("--resident-target", help="Target gRPC address for a pre-warmed resident worker, for example 127.0.0.1:50071.")
     parser.add_argument("--resident-autostart", action="store_true", help="Auto-launch a managed resident worker for models that support it.")
-    parser.add_argument("--audio-encode-mode", choices=["stream", "once"], help="Audio encoding mode for FlashTalk.")
+    parser.add_argument("--audio-encode-mode", choices=["stream", "once"], help="Audio encoding mode for talking-head models.")
+    parser.add_argument("--model-type", help="Model type for script-backed model families, for example FlashHead pro/lite.")
+    parser.add_argument("--sample-steps", type=int, help="Sample step override for script-backed video/avatar models.")
+    parser.add_argument(
+        "--vae-2d-split",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable or disable FlashHead 2D VAE split.",
+    )
+    parser.add_argument("--latent-carry", action="store_true", help="Enable FlashHead latent carry experimental mode.")
+    parser.add_argument("--npu-fusion-attention", action="store_true", help="Enable FlashHead NPU fusion attention.")
+    parser.add_argument("--profile", action="store_true", help="Enable model-side profiling when supported.")
     parser.add_argument("--cpu-offload", action="store_true", help="Enable CPU offload for script-backed models that support it.")
     parser.add_argument("--max-chunks", type=int, help="Limit generated audio chunks for streaming avatar models.")
     parser.add_argument("--python-executable", help="Python interpreter used to launch external model scripts.")
@@ -121,7 +141,6 @@ def add_request_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--dura-print", action="store_true", help="Print LiveAct per-block duration details.")
     parser.add_argument("--steam-audio", action="store_true", help="Use LiveAct streaming-audio path; name follows upstream's steam_audio flag.")
     parser.add_argument("--mean-memory", action="store_true", help="Enable LiveAct mean-memory strategy.")
-    parser.add_argument("--sample-steps", type=int, help="LiveAct diffusion sample steps; use 1 for quick Ascend smoke.")
     parser.add_argument("--use-cache-vae", action="store_true", help="Use LiveAct cached VAE decode.")
     parser.add_argument("--vae-path", help="LiveAct VAE checkpoint override, for example models/vae/lightvaew2_1.pth.")
     parser.add_argument("--use-lightvae", action="store_true", help="Use LiveAct LightVAE architecture.")
@@ -335,12 +354,18 @@ def request_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser)
         parser.error("either --config or both --task and --model are required")
 
     inputs = {}
-    if args.task in {"text2image", "text2video"}:
+    if args.task in {"text2image", "text2video", "text2audio"}:
         if not args.prompt:
             parser.error(f"--prompt is required for --task {args.task}")
         inputs["prompt"] = args.prompt
         if args.negative_prompt:
             inputs["negative_prompt"] = args.negative_prompt
+        if args.task == "text2audio":
+            if not args.audio:
+                parser.error("--audio is required for --task text2audio")
+            inputs["audio"] = args.audio
+            if args.reference_text:
+                inputs["reference_text"] = args.reference_text
         if args.task == "text2video":
             if args.num_frames is not None:
                 inputs["num_frames"] = args.num_frames
@@ -413,6 +438,10 @@ def request_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser)
         "max_sequence_length",
         "caption_upsample_temperature",
         "output_dir",
+        "server_addr",
+        "server_port",
+        "sample_rate",
+        "request_id",
         "frame_bucket",
         "motion_bucket_id",
         "decode_chunk_size",
@@ -422,6 +451,9 @@ def request_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser)
         "wav2vec_dir",
         "resident_target",
         "audio_encode_mode",
+        "model_type",
+        "sample_steps",
+        "vae_2d_split",
         "max_chunks",
         "python_executable",
         "launcher",
@@ -436,7 +468,6 @@ def request_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser)
         "wan_quant_include",
         "wan_quant_exclude",
         "audio_cfg",
-        "sample_steps",
         "vae_path",
         "condition_cache_dir",
         "text_cache_device",
@@ -483,6 +514,9 @@ def request_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser)
         "fast_export",
         "disable_fast_export",
         "stage_profile",
+        "latent_carry",
+        "npu_fusion_attention",
+        "profile",
     ):
         if getattr(args, flag, False):
             config[flag] = True
@@ -538,9 +572,10 @@ def render_model_summary(spec, *, variants=None) -> str:
     return "\n".join(lines)
 
 
-_MARKDOWN_TASK_ORDER = ("text2image", "text2video", "image2video", "audio2video", "image2image", "inpaint", "edit")
+_MARKDOWN_TASK_ORDER = ("text2image", "text2audio", "text2video", "image2video", "audio2video", "image2image", "inpaint", "edit")
 _MARKDOWN_TASK_HEADINGS = {
     "text2image": "Text to image",
+    "text2audio": "Text to audio",
     "text2video": "Text to video",
     "image2video": "Image to video",
     "audio2video": "Audio to video",
