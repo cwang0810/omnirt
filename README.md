@@ -21,15 +21,15 @@
 
 ---
 
-OmniRT 是一个开源的多模态生成运行时，把 **文本→图像 / 图像→图像 / 文本→视频 / 图像→视频 / 音频→数字人** 等任务统一到同一套请求契约、同一组 CLI / Python API / HTTP 服务，以及可替换的硬件后端之上。切换不同模型家族时，你**不需要**重新适应一整套新的运行时接口。
+OmniRT 是一个开源的多模态生成运行时，把 **文本→图像 / 图像→图像 / 文本→音频 / 文本→视频 / 图像→视频 / 音频→数字人** 等任务统一到同一套请求契约、同一组 CLI / Python API / HTTP 服务，以及可替换的硬件后端之上。切换不同模型家族时，你**不需要**重新适应一整套新的运行时接口。
 
 ## ✨ 核心亮点
 
 - **统一请求契约** — `GenerateRequest`、`GenerateResult`、`RunReport` 三个对象覆盖全部任务面
 - **跨后端运行时** — 同一份请求可在 `cuda` / `ascend` / `cpu-stub` 上完成校验与执行
 - **三种入口** — Python API、CLI (`omnirt generate / validate / models`)、FastAPI 服务
-- **16+ 模型家族** — SD1.5 / SDXL / SD3 / FLUX / FLUX2 / WAN / SVD / AnimateDiff / ChronoEdit / FlashTalk / FlashHead 等
-- **产物标准化** — 图像统一导出为 PNG，视频统一导出为 MP4，每次运行都会生成一份 `RunReport`
+- **50+ 已注册模型** — 覆盖 Stable Diffusion / FLUX / Qwen-Image / CosyVoice / Wan / SVD / Hunyuan / SoulX 等图像、语音、视频与数字人路径
+- **产物标准化** — 图像统一导出为 PNG，音频统一导出为 WAV，视频统一导出为 MP4，每次运行都会生成一份 `RunReport`
 - **离线与国内环境友好** — 同时支持本地目录、Hugging Face、ModelScope、Modelers 快照
 - **LoRA 灵活加载** — 本地 safetensors 与 `hf://` 单文件引用并存
 - **异步派发** — `queue` / `worker` / `policies` 支持批量请求与多模型排队执行
@@ -42,6 +42,7 @@ OmniRT 是一个开源的多模态生成运行时，把 **文本→图像 / 图�
 |---|---|---|
 | `text2image` | 文本驱动图像生成 | PNG |
 | `image2image` | 图像引导图像生成 | PNG |
+| `text2audio` | 文本驱动语音生成 | WAV |
 | `text2video` | 文本驱动视频生成 | MP4 |
 | `image2video` | 首帧引导视频生成 | MP4 |
 | `audio2video` | 音频驱动说话数字人 | MP4 |
@@ -120,34 +121,25 @@ omnirt models
 
 对应的文档镜像见 [docs/user_guide/models/supported_models.md](./docs/user_guide/models/supported_models.md)，当前接入快照见 [support_status.md](./docs/user_guide/models/support_status.md)。
 
-| 类别 | 代表模型 |
+| 任务 / 类别 | 当前 registry id |
 |---|---|
-| 图像 | `sdxl-base-1.0`, `sdxl-refiner-1.0`, `sd15`, `sd21`, `sd3`, `flux.dev`, `flux2.dev`, `kolors`, `pixart-sigma`, `bria-3.2`, `lumina-t2x` |
-| 图像编辑 | `flux-depth`, `flux-canny`, `flux-fill`, `flux-kontext`, `qwen-image-edit*`, `chronoedit` |
-| 视频 | `svd-xt`, `wan*`, `animate-diff-sdxl`, `mochi`, `skyreels-v2`, `hunyuan-video-1.5-*`, `helios-*` |
-| 数字人 | `flashtalk`, `flashhead` |
+| `text2image` | `bria-3.2`, `flux-dev`, `flux-schnell`, `flux2.dev`, `glm-image`, `hidream-i1`, `hunyuan-image-2.1`, `kolors`, `lumina-t2x`, `omnigen`, `ovis-image`, `pixart-sigma`, `qwen-image`, `sana-1.6b`, `sd15`, `sd21`, `sd3-medium`, `sd3.5-large`, `sd3.5-large-turbo`, `sdxl-base-1.0`, `sdxl-turbo` |
+| `text2audio` | `cosyvoice3-triton-trtllm` |
+| `image2image` | `sd15`, `sd21`, `sdxl-base-1.0`, `sdxl-refiner-1.0` |
+| `inpaint` | `flux-fill`, `sd15`, `sd21`, `sdxl-base-1.0` |
+| `edit` | `chronoedit`, `flux-canny`, `flux-depth`, `flux-kontext`, `qwen-image-edit`, `qwen-image-edit-plus`, `qwen-image-layered` |
+| `text2video` | `animate-diff-sdxl`, `cogvideox-2b`, `cogvideox-5b`, `helios-t2v`, `hunyuan-video`, `hunyuan-video-1.5-t2v`, `kandinsky5-t2v`, `ltx-video`, `mochi`, `sana-video`, `skyreels-v2`, `wan2.1-t2v-14b`, `wan2.2-t2v-14b` |
+| `image2video` | `helios-i2v`, `hunyuan-video-1.5-i2v`, `kandinsky5-i2v`, `ltx2-i2v`, `svd`, `svd-xt`, `wan2.1-i2v-14b`, `wan2.2-i2v-14b` |
+| `audio2video` | `soulx-flashhead-1.3b`, `soulx-flashtalk-14b`, `soulx-liveact-14b` |
+
+同一模型 ID 可能支持多个任务，上表按 registry 中的模型-任务注册关系展开。
+别名：`flux2-dev` 指向 `flux2.dev`。
 
 `image2image` 的推荐起点是 `sdxl-base-1.0`、`sdxl-refiner-1.0`、`sd15`、`sd21`。
 
 ## 🧱 架构速览
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  CLI / Python API / FastAPI Server                           │
-├──────────────────────────────────────────────────────────────┤
-│  requests (typed helpers)  →  GenerateRequest                │
-│                               ↓                              │
-│                        dispatch / scheduler / queue          │
-│                               ↓                              │
-│                          engine  +  middleware               │
-│                               ↓                              │
-│  backends:  cuda   |   ascend   |   cpu-stub          │
-│                               ↓                              │
-│                models:  sdxl · flux · wan · svd · …          │
-│                               ↓                              │
-│                    GenerateResult + RunReport (PNG / MP4)    │
-└──────────────────────────────────────────────────────────────┘
-```
+![OmniRT 统一生成运行时架构图](./docs/assets/architecture/omnirt-architecture.zh.svg)
 
 关于架构分层、后端抽象和模型适配的更多细节，见 [docs/developer_guide/architecture.md](./docs/developer_guide/architecture.md)。
 
@@ -162,8 +154,9 @@ omnirt models
 ## 📦 当前状态
 
 - `sdxl-base-1.0` 与 `svd-xt` 已在 CUDA 和 Ascend 双后端完成真机 smoke
+- `cosyvoice3-triton-trtllm` 已接入 `text2audio`，通过官方 Triton / TensorRT-LLM 路线生成 WAV 音频
 - `image2image` 已正式公开；`sdxl-refiner-1.0` 已具备 smoke 用例，真机验证仍在进行中
-- `flux-fill`、`flux-kontext`、`qwen-image-edit*` 等编辑模型已经接入 smoke 入口，待补齐已验证的本地模型目录
+- `flux-fill`、`flux-kontext`、`qwen-image-edit`、`qwen-image-edit-plus` 等编辑模型已经接入 smoke 入口，待补齐已验证的本地模型目录
 - 更完整的路线图见 [docs/user_guide/models/roadmap.md](./docs/user_guide/models/roadmap.md)
 
 ## 🚢 部署形态

@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">OmniRT unified generation runtime architecture</title>
+  <desc id="desc">OmniRT normalizes CLI, Python API, and HTTP server calls into a shared request contract, dispatches them through the engine, queue, batcher, and controller, then runs executor paths against model families and hardware backends while emitting GenerateResult, RunReport, and observability events.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7fafc; }
+      .panel { fill: #ffffff; stroke: #cad5e2; stroke-width: 2; rx: 18; }
+      .entry { fill: #eaf5ff; stroke: #2f7dd1; stroke-width: 2; rx: 14; }
+      .contract { fill: #eefbea; stroke: #43a047; stroke-width: 2; rx: 14; }
+      .engine { fill: #fff7e6; stroke: #d89000; stroke-width: 2; rx: 14; }
+      .executor { fill: #fff1f2; stroke: #d6475c; stroke-width: 2; rx: 14; }
+      .backend { fill: #f1edff; stroke: #725ac1; stroke-width: 2; rx: 14; }
+      .observe { fill: #e9fbf6; stroke: #178f78; stroke-width: 2; rx: 14; }
+      .side { fill: #ffffff; stroke: #99a8ba; stroke-width: 1.5; stroke-dasharray: 8 7; rx: 14; }
+      .title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; font-size: 38px; font-weight: 800; fill: #0f172a; }
+      .subtitle { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; font-size: 18px; fill: #475569; }
+      .h { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; font-size: 22px; font-weight: 750; fill: #111827; }
+      .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; font-size: 17px; fill: #243244; }
+      .small { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; font-size: 15px; fill: #526174; }
+      .label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; font-size: 14px; font-weight: 700; fill: #334155; }
+      .arrow { stroke: #53657d; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #8a99aa; stroke-width: 2; fill: none; stroke-dasharray: 7 7; marker-end: url(#arrow-soft); }
+      .chip { fill: #ffffff; stroke: #ccd7e3; stroke-width: 1.5; rx: 11; }
+    </style>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto">
+      <path d="M 0 0 L 14 7 L 0 14 z" fill="#53657d"/>
+    </marker>
+    <marker id="arrow-soft" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#8a99aa"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1400" height="900"/>
+  <rect class="panel" x="40" y="36" width="1320" height="828"/>
+
+  <text class="title" x="80" y="92">OmniRT Unified Generation Runtime</text>
+  <text class="subtitle" x="80" y="126">One request contract, multiple executor paths, CUDA / Ascend / cpu-stub backends, queueing, remote workers, and observability</text>
+
+  <rect class="entry" x="80" y="170" width="1240" height="96"/>
+  <text class="h" x="110" y="210">1. Interface layer: normalize external calls into GenerateRequest</text>
+  <rect class="chip" x="110" y="228" width="230" height="28"/><text class="small" x="130" y="248">Python API: generate / validate</text>
+  <rect class="chip" x="365" y="228" width="270" height="28"/><text class="small" x="385" y="248">CLI: generate / validate / models</text>
+  <rect class="chip" x="660" y="228" width="260" height="28"/><text class="small" x="680" y="248">FastAPI: /v1/generate / jobs</text>
+  <rect class="chip" x="945" y="228" width="260" height="28"/><text class="small" x="965" y="248">OpenAI-compatible / realtime</text>
+
+  <path class="arrow" d="M700 266 V300"/>
+
+  <rect class="contract" x="80" y="300" width="1240" height="108"/>
+  <text class="h" x="110" y="338">2. Contract and registry layer: resolve model, task, preset, and runtime config</text>
+  <rect class="chip" x="110" y="358" width="230" height="30"/><text class="t" x="130" y="379">typed request helpers</text>
+  <rect class="chip" x="365" y="358" width="215" height="30"/><text class="t" x="385" y="379">GenerateRequest</text>
+  <rect class="chip" x="605" y="358" width="240" height="30"/><text class="t" x="625" y="379">validation / presets</text>
+  <rect class="chip" x="870" y="358" width="210" height="30"/><text class="t" x="890" y="379">registry / aliases</text>
+  <rect class="chip" x="1105" y="358" width="170" height="30"/><text class="t" x="1125" y="379">resolved config</text>
+
+  <path class="arrow" d="M700 408 V442"/>
+
+  <rect class="engine" x="80" y="442" width="760" height="146"/>
+  <text class="h" x="110" y="480">3. Engine and dispatch layer</text>
+  <text class="t" x="110" y="512">OmniEngine.run_sync and async job flow</text>
+  <text class="small" x="110" y="540">Local execution, JobQueue, RequestBatcher, Controller, InMemoryJobStore / RedisJobStore</text>
+  <rect class="chip" x="110" y="556" width="145" height="26"/><text class="small" x="128" y="575">sync run</text>
+  <rect class="chip" x="275" y="556" width="145" height="26"/><text class="small" x="293" y="575">async jobs</text>
+  <rect class="chip" x="440" y="556" width="170" height="26"/><text class="small" x="458" y="575">batch / policy</text>
+  <rect class="chip" x="630" y="556" width="170" height="26"/><text class="small" x="648" y="575">remote worker</text>
+
+  <rect class="side" x="880" y="442" width="440" height="146"/>
+  <text class="h" x="910" y="480">Serving extension points</text>
+  <text class="t" x="910" y="512">gRPC worker transport</text>
+  <text class="t" x="910" y="540">SSE / WebSocket / realtime events</text>
+  <text class="small" x="910" y="568">Lightweight control plane for multi-process,</text>
+  <text class="small" x="910" y="586">multi-host, and online serving</text>
+
+  <path class="arrow" d="M460 588 V622"/>
+  <path class="arrow-soft" d="M785 532 C850 532 850 532 880 532"/>
+
+  <rect class="executor" x="80" y="622" width="1240" height="98"/>
+  <text class="h" x="110" y="660">4. Executor layer: ModelSpec.execution_mode chooses the runtime path</text>
+  <rect class="chip" x="110" y="678" width="185" height="28"/><text class="t" x="130" y="698">modular</text>
+  <rect class="chip" x="325" y="678" width="185" height="28"/><text class="t" x="345" y="698">legacy_call</text>
+  <rect class="chip" x="540" y="678" width="185" height="28"/><text class="t" x="560" y="698">subprocess</text>
+  <rect class="chip" x="755" y="678" width="230" height="28"/><text class="t" x="775" y="698">persistent_worker</text>
+  <text class="small" x="1010" y="697">for high-init-cost and multi-card models</text>
+
+  <path class="arrow" d="M700 720 V754"/>
+
+  <rect class="backend" x="80" y="748" width="820" height="88"/>
+  <text class="h" x="110" y="785">5. Models, launchers, and hardware backends</text>
+  <text class="t" x="110" y="812">sdxl / flux / flux2 / wan / svd / animatediff</text>
+  <text class="t" x="110" y="832">flashtalk / flashhead</text>
+  <text class="small" x="585" y="785">launchers: python / torchrun / accelerate</text>
+  <text class="small" x="585" y="813">backends: cuda / ascend / cpu-stub</text>
+
+  <rect class="observe" x="940" y="748" width="380" height="88"/>
+  <text class="h" x="970" y="785">6. Results and observability</text>
+  <text class="t" x="970" y="812">GenerateResult + RunReport</text>
+  <text class="small" x="970" y="832">PNG / MP4 / metrics / traces</text>
+
+  <path class="arrow" d="M900 792 H940"/>
+
+  <text class="label" x="80" y="852">Stable public contracts: GenerateRequest / GenerateResult / RunReport.schema_version</text>
+</svg>
