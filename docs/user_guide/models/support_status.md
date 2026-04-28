@@ -2,7 +2,7 @@
 
 本文档记录 `omnirt` 当前已经接入、已做真机 smoke、以及尚未完成的重点模型。
 
-最近更新：`2026-04-21`
+最近更新：`2026-04-28`
 
 ## 当前公开任务面
 
@@ -29,6 +29,9 @@
 - `soulx-flashtalk-14b`
   Ascend: `内部 Ascend 验证主机`
   说明: `persistent_worker` 常驻 8 卡 `Ascend 910B2` 链路已跑通；冷启动约 `91s`，实时配置热态 `steady_chunk_core_ms_avg ≈ 891ms`
+- `soulx-liveact-14b`
+  Ascend: `内部 Ascend 验证主机`
+  说明: 外部 SoulX-LiveAct `generate.py` 已完成 4 卡 `Ascend 910B` 官方案例对齐；OmniRT 当前接入的是 script-backed wrapper，默认先用单张 NPU 生成 text context cache，再做 4 卡推理；推荐 `--text-cache-visible-devices <1张卡> --visible-devices <4张卡> --sample-steps 1` 做快速 smoke
 
 ## 已接入但仍待真机 smoke
 

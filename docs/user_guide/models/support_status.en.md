@@ -2,7 +2,7 @@
 
 This document tracks the models already integrated into `omnirt`, the ones that have completed real hardware smoke tests, and the high-priority targets that are still pending.
 
-Last updated: `2026-04-20`
+Last updated: `2026-04-28`
 
 ## Current public task surfaces
 
@@ -26,6 +26,12 @@ The following models have completed real hardware smoke tests using local model 
 - `svd-xt`
   CUDA: `internal CUDA validation host`
   Ascend: `internal Ascend validation host`
+- `soulx-flashtalk-14b`
+  Ascend: `internal Ascend validation host`
+  Notes: the `persistent_worker` path has completed an 8-card `Ascend 910B2` hardware run.
+- `soulx-liveact-14b`
+  Ascend: `internal Ascend validation host`
+  Notes: the external SoulX-LiveAct `generate.py` path has been aligned to the 4-card `Ascend 910B` official case; OmniRT exposes it through a script-backed wrapper. By default it prepares text context on one NPU before the 4-card inference job. Use `--text-cache-visible-devices <single-card> --visible-devices <four-cards> --sample-steps 1` for quick smoke.
 
 ## Integrated but still waiting for real hardware smoke
 
@@ -36,6 +42,17 @@ These models already have registry entries, request-surface integration, and loc
 - `flux-kontext`
 - `qwen-image-edit`
 - `qwen-image-edit-plus`
+- `chronoedit`
+- `flux-depth`
+- `flux-canny`
+- `qwen-image-layered`
+- `animate-diff-sdxl`
+- `kolors`
+- `pixart-sigma`
+- `bria-3.2`
+- `lumina-t2x`
+- `mochi`
+- `skyreels-v2`
 
 Relevant smoke tests already exist. For the now-public `image2image` surface, the recommended starting models are `sdxl-base-1.0`, `sdxl-refiner-1.0`, `sd15`, and `sd21`:
 
@@ -55,17 +72,7 @@ Relevant smoke tests already exist. For the now-public `image2image` surface, th
 
 ## High-priority targets not completed yet
 
-- `chronoedit`
-- `flux-depth`
-- `flux-canny`
-- `qwen-image-layered`
-- `kolors`
-- `pixart-sigma`
-- `animate-diff-sdxl`
-- `bria-3.2`
-- `lumina-t2x`
-- `mochi`
-- `skyreels-v2`
+- No new high-priority model gap is tracked here; the current priority is to keep adding real-hardware smoke evidence and deployable local model sources for integrated models.
 
 ## Related docs
 
