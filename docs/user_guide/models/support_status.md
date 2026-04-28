@@ -30,6 +30,9 @@
 - `soulx-flashtalk-14b`
   Ascend: `内部 Ascend 验证主机`
   说明: `persistent_worker` 常驻 8 卡 `Ascend 910B2` 链路已跑通；冷启动约 `91s`，实时配置热态 `steady_chunk_core_ms_avg ≈ 891ms`
+- `soulx-liveact-14b`
+  Ascend: `内部 Ascend 验证主机`
+  说明: 外部 SoulX-LiveAct `generate.py` 已完成 4 卡 `Ascend 910B` 官方案例对齐；OmniRT 当前接入的是 script-backed wrapper，默认先用单张 NPU 生成 text context cache，再做 4 卡推理；推荐 `--text-cache-visible-devices <1张卡> --visible-devices <4张卡> --sample-steps 1` 做快速 smoke
 - `soulx-flashhead-1.3b`
   Ascend: `内部 Ascend 验证主机`
   说明: 外部 SoulX-FlashHead checkout 已完成 910B NPU 适配和质量档验证；OmniRT 当前接入的是 script-backed 冷启动包装，默认 `2-step + 2D VAE split + latent_carry off`。OmniRT 真机冷启动 benchmark：2 卡 `82.96s`，4 卡 `84.08s`，输出均为 `512x512 / 10s / 250 frames`
@@ -42,9 +45,6 @@
 这一批模型已经完成 registry、请求面和本地单测，但还没有在仓库里沉淀出“已验证”的本地模型目录与双后端 smoke 结果：
 
 - `sdxl-refiner-1.0`
-- `chronoedit`
-- `flux-depth`
-- `flux-canny`
 - `flux-fill`
 - `flux-kontext`
 - `qwen-image-edit`
@@ -76,7 +76,9 @@
 
 ## 尚未完成的重点目标
 
-- 暂无新的高优先级缺口；当前更主要的是把已接入模型继续做真机 smoke 和国内可落地模型源验证
+- `flux-depth`
+- `flux-canny`
+- `chronoedit`
 
 ## 参考文档
 
